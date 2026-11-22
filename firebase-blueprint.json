@@ -1,0 +1,550 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile storing preferred role and aggregate study statistics.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID matching the document ID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name shown in teacher/student views."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["TEACHER", "STUDENT"],
+          "description": "Active workspace mode selected by the user."
+        },
+        "totalXp": {
+          "type": "integer",
+          "description": "Cumulative XP earned across study sessions."
+        },
+        "quizzesCompleted": {
+          "type": "integer",
+          "description": "Number of completed quizzes."
+        },
+        "cardsReviewed": {
+          "type": "integer",
+          "description": "Total flashcards reviewed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "displayName", "role", "totalXp", "quizzesCompleted", "cardsReviewed", "createdAt", "updatedAt"]
+    },
+    "StudyDeck": {
+      "title": "StudyDeck",
+      "description": "A course study deck authored by a teacher containing flashcards and quiz questions.",
+      "type": "object",
+      "properties": {
+        "teacherId": {
+          "type": "string",
+          "description": "UID of the teacher who created this deck."
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Display name of the teacher."
+        },
+        "title": {
+          "type": "string",
+          "description": "Deck title."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject category."
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief overview of what students will learn."
+        },
+        "joinCode": {
+          "type": "string",
+          "description": "Uppercase alphanumeric code students use to find and join this deck."
+        },
+        "accentColorKey": {
+          "type": "string",
+          "enum": ["INDIGO", "TERRACOTTA", "SAGE", "AMBER", "PLUM"],
+          "description": "Visual accent theme for the deck card."
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Whether students can discover and study this deck via join code."
+        },
+        "flashcardCount": {
+          "type": "integer",
+          "description": "Number of flashcards in this deck."
+        },
+        "quizCount": {
+          "type": "integer",
+          "description": "Number of quiz questions in this deck."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["teacherId", "teacherName", "title", "subject", "description", "joinCode", "accentColorKey", "published", "flashcardCount", "quizCount", "createdAt", "updatedAt"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "An interactive two-sided study flashcard inside a deck.",
+      "type": "object",
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "description": "Parent deck ID."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Denormalized teacher UID for rule enforcement."
+        },
+        "front": {
+          "type": "string",
+          "description": "Question or term on the front of the card."
+        },
+        "back": {
+          "type": "string",
+          "description": "Answer or definition on the back of the card."
+        },
+        "hint": {
+          "type": "string",
+          "description": "Optional study hint."
+        },
+        "orderIndex": {
+          "type": "integer",
+          "description": "Sort position in the deck."
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Mirrors parent deck published visibility."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["deckId", "teacherId", "front", "back", "hint", "orderIndex", "published", "createdAt", "updatedAt"]
+    },
+    "QuizQuestion": {
+      "title": "QuizQuestion",
+      "description": "Multiple-choice interactive quiz question inside a deck.",
+      "type": "object",
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "description": "Parent deck ID."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Denormalized teacher UID for rule enforcement."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Question prompt text."
+        },
+        "options": {
+          "type": "array",
+          "description": "2 to 4 answer options."
+        },
+        "correctIndex": {
+          "type": "integer",
+          "description": "Zero-based index of the correct option."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Teaching explanation shown after answering."
+        },
+        "orderIndex": {
+          "type": "integer",
+          "description": "Sort position in the quiz."
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Mirrors parent deck published visibility."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["deckId", "teacherId", "prompt", "options", "correctIndex", "explanation", "orderIndex", "published", "createdAt", "updatedAt"]
+    },
+    "DeckProgress": {
+      "title": "DeckProgress",
+      "description": "Student progress and mastery record for a specific deck, readable by the student and the deck's teacher.",
+      "type": "object",
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "description": "Parent deck ID."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Denormalized teacher UID so the teacher can query class progress."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "UID of the student."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Display name of the student."
+        },
+        "masteredCardIds": {
+          "type": "array",
+          "description": "List of mastered flashcard IDs."
+        },
+        "reviewedCardsCount": {
+          "type": "integer",
+          "description": "Number of flashcard reviews completed."
+        },
+        "totalCardsCount": {
+          "type": "integer",
+          "description": "Snapshot of total flashcards in deck."
+        },
+        "quizzesTaken": {
+          "type": "integer",
+          "description": "Total quiz attempts on this deck."
+        },
+        "bestQuizPercent": {
+          "type": "integer",
+          "description": "Highest quiz percentage achieved (0-100)."
+        },
+        "lastQuizPercent": {
+          "type": "integer",
+          "description": "Most recent quiz percentage achieved (0-100)."
+        },
+        "lastQuizCorrect": {
+          "type": "integer",
+          "description": "Correct answers on most recent quiz."
+        },
+        "lastQuizTotal": {
+          "type": "integer",
+          "description": "Total questions on most recent quiz."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["deckId", "teacherId", "studentId", "studentName", "masteredCardIds", "reviewedCardsCount", "totalCardsCount", "quizzesTaken", "bestQuizPercent", "lastQuizPercent", "lastQuizCorrect", "lastQuizTotal", "createdAt", "updatedAt"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "Student's personal enrollment summary for a deck they joined.",
+      "type": "object",
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "description": "Joined deck ID."
+        },
+        "deckTitle": {
+          "type": "string",
+          "description": "Deck title."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Deck subject."
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Teacher display name."
+        },
+        "accentColorKey": {
+          "type": "string",
+          "enum": ["INDIGO", "TERRACOTTA", "SAGE", "AMBER", "PLUM"],
+          "description": "Visual accent theme."
+        },
+        "masteredCount": {
+          "type": "integer",
+          "description": "Mastered flashcards count."
+        },
+        "totalCards": {
+          "type": "integer",
+          "description": "Total flashcards count."
+        },
+        "bestQuizPercent": {
+          "type": "integer",
+          "description": "Best quiz percentage (0-100)."
+        },
+        "quizzesTaken": {
+          "type": "integer",
+          "description": "Number of quizzes taken."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when joined."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last studied."
+        }
+      },
+      "required": ["deckId", "deckTitle", "subject", "teacherName", "accentColorKey", "masteredCount", "totalCards", "bestQuizPercent", "quizzesTaken", "createdAt", "updatedAt"]
+    },
+    "StudyLog": {
+      "title": "StudyLog",
+      "description": "Personal study session history entry for tracking student progress over time.",
+      "type": "object",
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "description": "Studied deck ID."
+        },
+        "deckTitle": {
+          "type": "string",
+          "description": "Studied deck title."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["QUIZ", "FLASHCARDS"],
+          "description": "Study mode completed."
+        },
+        "scorePercent": {
+          "type": "integer",
+          "description": "Session mastery or quiz score percentage (0-100)."
+        },
+        "correctCount": {
+          "type": "integer",
+          "description": "Correct or known items count."
+        },
+        "totalCount": {
+          "type": "integer",
+          "description": "Total items in session."
+        },
+        "xpEarned": {
+          "type": "integer",
+          "description": "XP awarded for the session."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the session."
+        }
+      },
+      "required": ["deckId", "deckTitle", "mode", "scorePercent", "correctCount", "totalCount", "xpEarned", "createdAt"]
+    },
+    "LiveSession": {
+      "title": "LiveSession",
+      "description": "Live video class broadcast state and currently presented study item for a deck.",
+      "type": "object",
+      "properties": {
+        "deckId": { "type": "string", "description": "Parent deck ID." },
+        "teacherId": { "type": "string", "description": "Teacher UID." },
+        "teacherName": { "type": "string", "description": "Teacher display name." },
+        "active": { "type": "boolean", "description": "Whether the teacher is currently live on camera." },
+        "published": { "type": "boolean", "description": "Mirrors deck visibility." },
+        "activeItemType": { "type": "string", "enum": ["NONE", "FLASHCARD", "QUIZ"], "description": "Type of item currently presented." },
+        "activeItemIndex": { "type": "integer", "description": "Index of active flashcard or question." },
+        "activePrompt": { "type": "string", "description": "Prompt text currently highlighted during live class." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when session started." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when session updated." }
+      },
+      "required": ["deckId", "teacherId", "teacherName", "active", "published", "activeItemType", "activeItemIndex", "activePrompt", "createdAt", "updatedAt"]
+    },
+    "StudyVideo": {
+      "title": "StudyVideo",
+      "description": "Recorded study video lesson attached to a deck with local fast playback file reference and cloud lesson metadata.",
+      "type": "object",
+      "properties": {
+        "deckId": { "type": "string", "description": "Parent deck ID." },
+        "teacherId": { "type": "string", "description": "Teacher UID." },
+        "teacherName": { "type": "string", "description": "Teacher display name." },
+        "title": { "type": "string", "description": "Lesson video title." },
+        "notes": { "type": "string", "description": "Optional study notes or summary." },
+        "fileName": { "type": "string", "description": "Safe local video filename stored on device." },
+        "durationMs": { "type": "integer", "description": "Video duration in milliseconds." },
+        "fileSizeBytes": { "type": "integer", "description": "Video size in bytes." },
+        "published": { "type": "boolean", "description": "Mirrors parent deck visibility." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when uploaded." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["deckId", "teacherId", "teacherName", "title", "notes", "fileName", "durationMs", "fileSizeBytes", "published", "createdAt", "updatedAt"]
+    },
+    "StudyWallet": {
+      "title": "StudyWallet",
+      "description": "User's study wallet storing balance and aggregate top-up/spend totals in INR.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID." },
+        "balanceInr": { "type": "integer", "description": "Available wallet balance in INR." },
+        "totalAddedInr": { "type": "integer", "description": "Cumulative amount added to wallet in INR." },
+        "totalSpentInr": { "type": "integer", "description": "Cumulative amount paid for batches in INR." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when wallet was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when wallet was updated." }
+      },
+      "required": ["userId", "balanceInr", "totalAddedInr", "totalSpentInr", "createdAt", "updatedAt"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Immutable ledger entry for wallet money top-ups and batch fee payments.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID." },
+        "type": { "type": "string", "enum": ["TOP_UP", "BATCH_PAYMENT"], "description": "Transaction type." },
+        "amountInr": { "type": "integer", "description": "Amount in INR." },
+        "title": { "type": "string", "description": "Human-readable description." },
+        "batchId": { "type": "string", "description": "Related batch ID or empty string." },
+        "paymentMethod": { "type": "string", "enum": ["WALLET", "UPI", "CARD_TOPUP", "NETBANKING_TOPUP"], "description": "Payment instrument used." },
+        "status": { "type": "string", "enum": ["COMPLETED"], "description": "Transaction status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of transaction." }
+      },
+      "required": ["userId", "type", "amountInr", "title", "batchId", "paymentMethod", "status", "createdAt"]
+    },
+    "StudyBatch": {
+      "title": "StudyBatch",
+      "description": "Coaching or study batch with cover image, schedule, fee, and enrollment count.",
+      "type": "object",
+      "properties": {
+        "teacherId": { "type": "string", "description": "Creator teacher UID." },
+        "teacherName": { "type": "string", "description": "Creator teacher display name." },
+        "title": { "type": "string", "description": "Batch title." },
+        "subject": { "type": "string", "description": "Batch subject or exam category." },
+        "description": { "type": "string", "description": "Batch syllabus and details." },
+        "scheduleText": { "type": "string", "description": "Class days and timing." },
+        "batchCode": { "type": "string", "description": "Uppercase alphanumeric batch code." },
+        "priceInr": { "type": "integer", "description": "Batch fee in INR (0 for free)." },
+        "upiId": { "type": "string", "description": "Optional teacher UPI ID for direct UPI payments." },
+        "coverImageData": { "type": "string", "description": "Compressed JPEG base64 cover image or empty string." },
+        "accentColorKey": { "type": "string", "enum": ["INDIGO", "TERRACOTTA", "SAGE", "AMBER", "PLUM"], "description": "Fallback visual accent theme." },
+        "published": { "type": "boolean", "description": "Whether students can search and enroll in this batch." },
+        "enrolledCount": { "type": "integer", "description": "Total students enrolled in the batch." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["teacherId", "teacherName", "title", "subject", "description", "scheduleText", "batchCode", "priceInr", "upiId", "coverImageData", "accentColorKey", "published", "enrolledCount", "createdAt", "updatedAt"]
+    },
+    "BatchEnrollment": {
+      "title": "BatchEnrollment",
+      "description": "Student's personal batch enrollment and payment receipt.",
+      "type": "object",
+      "properties": {
+        "batchId": { "type": "string", "description": "Enrolled batch ID." },
+        "batchTitle": { "type": "string", "description": "Batch title." },
+        "subject": { "type": "string", "description": "Batch subject." },
+        "teacherId": { "type": "string", "description": "Instructor UID." },
+        "teacherName": { "type": "string", "description": "Instructor name." },
+        "scheduleText": { "type": "string", "description": "Batch schedule." },
+        "accentColorKey": { "type": "string", "enum": ["INDIGO", "TERRACOTTA", "SAGE", "AMBER", "PLUM"], "description": "Visual accent theme." },
+        "coverImageData": { "type": "string", "description": "Compressed cover image snapshot." },
+        "amountPaidInr": { "type": "integer", "description": "Fee paid in INR." },
+        "paymentMethod": { "type": "string", "enum": ["FREE", "WALLET", "UPI"], "description": "How the enrollment was completed." },
+        "transactionId": { "type": "string", "description": "Wallet transaction reference ID or empty." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when enrolled." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["batchId", "batchTitle", "subject", "teacherId", "teacherName", "scheduleText", "accentColorKey", "coverImageData", "amountPaidInr", "paymentMethod", "transactionId", "createdAt", "updatedAt"]
+    },
+    "BatchMember": {
+      "title": "BatchMember",
+      "description": "Enrolled student roster entry inside a batch readable by the student and the batch teacher.",
+      "type": "object",
+      "properties": {
+        "batchId": { "type": "string", "description": "Parent batch ID." },
+        "teacherId": { "type": "string", "description": "Denormalized batch teacher UID." },
+        "studentId": { "type": "string", "description": "Enrolled student UID." },
+        "studentName": { "type": "string", "description": "Student display name." },
+        "amountPaidInr": { "type": "integer", "description": "Amount paid in INR." },
+        "paymentMethod": { "type": "string", "enum": ["FREE", "WALLET", "UPI"], "description": "Payment method used." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when joined." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["batchId", "teacherId", "studentId", "studentName", "amountPaidInr", "paymentMethod", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and aggregate stats owned by {userId}."
+    },
+    "/users/{userId}/enrollments/{deckId}": {
+      "schema": { "$ref": "#/entities/Enrollment" },
+      "description": "Decks joined by the student for quick access and progress summary."
+    },
+    "/users/{userId}/studyLogs/{logId}": {
+      "schema": { "$ref": "#/entities/StudyLog" },
+      "description": "Chronological personal study session history."
+    },
+    "/users/{userId}/wallet/{walletId}": {
+      "schema": { "$ref": "#/entities/StudyWallet" },
+      "description": "Private user study wallet balance and totals."
+    },
+    "/users/{userId}/transactions/{txId}": {
+      "schema": { "$ref": "#/entities/WalletTransaction" },
+      "description": "Private user wallet top-up and batch payment transactions."
+    },
+    "/users/{userId}/batchEnrollments/{batchId}": {
+      "schema": { "$ref": "#/entities/BatchEnrollment" },
+      "description": "Batches the user has joined or paid for."
+    },
+    "/decks/{deckId}": {
+      "schema": { "$ref": "#/entities/StudyDeck" },
+      "description": "Study decks authored by teachers and discoverable by students via join code."
+    },
+    "/decks/{deckId}/flashcards/{cardId}": {
+      "schema": { "$ref": "#/entities/Flashcard" },
+      "description": "Flashcards belonging to a study deck."
+    },
+    "/decks/{deckId}/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/QuizQuestion" },
+      "description": "Multiple-choice quiz questions belonging to a study deck."
+    },
+    "/decks/{deckId}/progress/{studentId}": {
+      "schema": { "$ref": "#/entities/DeckProgress" },
+      "description": "Per-student progress within a deck, accessible to the student and the deck's teacher."
+    },
+    "/decks/{deckId}/liveSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/LiveSession" },
+      "description": "Live video class status and active teaching prompt for a deck."
+    },
+    "/decks/{deckId}/videos/{videoId}": {
+      "schema": { "$ref": "#/entities/StudyVideo" },
+      "description": "Study video lessons uploaded by the teacher for a deck."
+    },
+    "/batches/{batchId}": {
+      "schema": { "$ref": "#/entities/StudyBatch" },
+      "description": "Searchable coaching and study batches with cover image, schedule, and enrollment fee."
+    },
+    "/batches/{batchId}/members/{studentId}": {
+      "schema": { "$ref": "#/entities/BatchMember" },
+      "description": "Enrolled student roster entries for a batch."
+    }
+  }
+}

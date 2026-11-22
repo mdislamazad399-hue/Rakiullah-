@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Left book page -->
+    <path
+        android:fillColor="#FFF8EC"
+        android:pathData="M28,40 C28,38 29.8,36.5 32,36.8 L51,39.5 L51,71 L32,68.2 C29.8,67.9 28,66.2 28,64 Z" />
+    <!-- Right book page -->
+    <path
+        android:fillColor="#FFEED4"
+        android:pathData="M80,40 C80,38 78.2,36.5 76,36.8 L57,39.5 L57,71 L76,68.2 C78.2,67.9 80,66.2 80,64 Z" />
+    <!-- Center spine -->
+    <path
+        android:fillColor="#E07A5F"
+        android:pathData="M52,39.5 L56,39.5 L56,72 L52,72 Z" />
+    <!-- Gold bookmark ribbon -->
+    <path
+        android:fillColor="#F4A261"
+        android:pathData="M62,38.8 L70,37.6 L70,56 L66,53 L62,56 Z" />
+    <!-- Spark star above book -->
+    <path
+        android:fillColor="#FFD166"
+        android:pathData="M54,23 L56.8,30.2 L64,33 L56.8,35.8 L54,43 L51.2,35.8 L44,33 L51.2,30.2 Z" />
+</vector>

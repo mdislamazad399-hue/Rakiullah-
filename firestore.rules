@@ -1,0 +1,587 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidAccent(colorKey) {
+      return colorKey in ['INDIGO', 'TERRACOTTA', 'SAGE', 'AMBER', 'PLUM'];
+    }
+
+    // --- VALIDATION HELPERS ---
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.role in ['TEACHER', 'STUDENT'] &&
+             data.totalXp is int && data.totalXp >= 0 && data.totalXp <= 10000000 &&
+             data.quizzesCompleted is int && data.quizzesCompleted >= 0 && data.quizzesCompleted <= 1000000 &&
+             data.cardsReviewed is int && data.cardsReviewed >= 0 && data.cardsReviewed <= 10000000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStudyDeck(data) {
+      return data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 50 &&
+             data.description is string && data.description.size() <= 300 &&
+             data.joinCode is string && data.joinCode.matches('^[A-Z0-9]{4,12}$') &&
+             isValidAccent(data.accentColorKey) &&
+             data.published is bool &&
+             data.flashcardCount is int && data.flashcardCount >= 0 && data.flashcardCount <= 1000 &&
+             data.quizCount is int && data.quizCount >= 0 && data.quizCount <= 1000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFlashcard(data, deckId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.front is string && data.front.size() >= 1 && data.front.size() <= 300 &&
+             data.back is string && data.back.size() >= 1 && data.back.size() <= 500 &&
+             data.hint is string && data.hint.size() <= 150 &&
+             data.orderIndex is int && data.orderIndex >= 0 && data.orderIndex <= 10000 &&
+             data.published is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidQuizQuestion(data, deckId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.prompt is string && data.prompt.size() >= 1 && data.prompt.size() <= 300 &&
+             data.options is list && data.options.size() >= 2 && data.options.size() <= 4 &&
+             data.options[0] is string && data.options[0].size() >= 1 && data.options[0].size() <= 150 &&
+             data.options[1] is string && data.options[1].size() >= 1 && data.options[1].size() <= 150 &&
+             data.correctIndex is int && data.correctIndex >= 0 && data.correctIndex < data.options.size() &&
+             data.explanation is string && data.explanation.size() <= 400 &&
+             data.orderIndex is int && data.orderIndex >= 0 && data.orderIndex <= 10000 &&
+             data.published is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDeckProgress(data, deckId, studentId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.studentId is string && data.studentId == studentId &&
+             data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 80 &&
+             data.masteredCardIds is list && data.masteredCardIds.size() <= 200 &&
+             (data.masteredCardIds.size() == 0 || data.masteredCardIds[0] is string) &&
+             data.reviewedCardsCount is int && data.reviewedCardsCount >= 0 && data.reviewedCardsCount <= 100000 &&
+             data.totalCardsCount is int && data.totalCardsCount >= 0 && data.totalCardsCount <= 1000 &&
+             data.quizzesTaken is int && data.quizzesTaken >= 0 && data.quizzesTaken <= 100000 &&
+             data.bestQuizPercent is int && data.bestQuizPercent >= 0 && data.bestQuizPercent <= 100 &&
+             data.lastQuizPercent is int && data.lastQuizPercent >= 0 && data.lastQuizPercent <= 100 &&
+             data.lastQuizCorrect is int && data.lastQuizCorrect >= 0 && data.lastQuizCorrect <= 1000 &&
+             data.lastQuizTotal is int && data.lastQuizTotal >= 0 && data.lastQuizTotal <= 1000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidEnrollment(data, deckId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.deckTitle is string && data.deckTitle.size() >= 1 && data.deckTitle.size() <= 100 &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 50 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             isValidAccent(data.accentColorKey) &&
+             data.masteredCount is int && data.masteredCount >= 0 && data.masteredCount <= 1000 &&
+             data.totalCards is int && data.totalCards >= 0 && data.totalCards <= 1000 &&
+             data.bestQuizPercent is int && data.bestQuizPercent >= 0 && data.bestQuizPercent <= 100 &&
+             data.quizzesTaken is int && data.quizzesTaken >= 0 && data.quizzesTaken <= 100000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStudyLog(data) {
+      return data.deckId is string && data.deckId.size() >= 1 && data.deckId.size() <= 128 &&
+             data.deckTitle is string && data.deckTitle.size() >= 1 && data.deckTitle.size() <= 100 &&
+             data.mode in ['QUIZ', 'FLASHCARDS'] &&
+             data.scorePercent is int && data.scorePercent >= 0 && data.scorePercent <= 100 &&
+             data.correctCount is int && data.correctCount >= 0 && data.correctCount <= 1000 &&
+             data.totalCount is int && data.totalCount >= 1 && data.totalCount <= 1000 &&
+             data.xpEarned is int && data.xpEarned >= 0 && data.xpEarned <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidLiveSession(data, deckId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             data.active is bool &&
+             data.published is bool &&
+             data.activeItemType in ['NONE', 'FLASHCARD', 'QUIZ'] &&
+             data.activeItemIndex is int && data.activeItemIndex >= 0 && data.activeItemIndex <= 10000 &&
+             data.activePrompt is string && data.activePrompt.size() <= 300 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStudyVideo(data, deckId) {
+      return data.deckId is string && data.deckId == deckId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.notes is string && data.notes.size() <= 300 &&
+             data.fileName is string && data.fileName.size() >= 1 && data.fileName.size() <= 128 &&
+             data.fileName.matches('^[a-zA-Z0-9_.\\-]+$') &&
+             data.durationMs is int && data.durationMs >= 0 && data.durationMs <= 14400000 &&
+             data.fileSizeBytes is int && data.fileSizeBytes >= 0 && data.fileSizeBytes <= 2000000000 &&
+             data.published is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStudyWallet(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.balanceInr is int && data.balanceInr >= 0 && data.balanceInr <= 10000000 &&
+             data.totalAddedInr is int && data.totalAddedInr >= 0 && data.totalAddedInr <= 100000000 &&
+             data.totalSpentInr is int && data.totalSpentInr >= 0 && data.totalSpentInr <= 100000000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWalletTransaction(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.type in ['TOP_UP', 'BATCH_PAYMENT'] &&
+             data.amountInr is int && data.amountInr >= 1 && data.amountInr <= 1000000 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.batchId is string && data.batchId.size() <= 128 &&
+             data.paymentMethod in ['WALLET', 'UPI', 'CARD_TOPUP', 'NETBANKING_TOPUP'] &&
+             data.status in ['COMPLETED'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidStudyBatch(data) {
+      return data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 50 &&
+             data.description is string && data.description.size() <= 400 &&
+             data.scheduleText is string && data.scheduleText.size() <= 100 &&
+             data.batchCode is string && data.batchCode.matches('^[A-Z0-9]{4,12}$') &&
+             data.priceInr is int && data.priceInr >= 0 && data.priceInr <= 100000 &&
+             data.upiId is string && data.upiId.size() <= 100 &&
+             data.coverImageData is string && data.coverImageData.size() <= 150000 &&
+             isValidAccent(data.accentColorKey) &&
+             data.published is bool &&
+             data.enrolledCount is int && data.enrolledCount >= 0 && data.enrolledCount <= 1000000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBatchEnrollment(data, batchId) {
+      return data.batchId is string && data.batchId == batchId &&
+             data.batchTitle is string && data.batchTitle.size() >= 1 && data.batchTitle.size() <= 100 &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 50 &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 80 &&
+             data.scheduleText is string && data.scheduleText.size() <= 100 &&
+             isValidAccent(data.accentColorKey) &&
+             data.coverImageData is string && data.coverImageData.size() <= 150000 &&
+             data.amountPaidInr is int && data.amountPaidInr >= 0 && data.amountPaidInr <= 100000 &&
+             data.paymentMethod in ['FREE', 'WALLET', 'UPI'] &&
+             data.transactionId is string && data.transactionId.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBatchMember(data, batchId, studentId) {
+      return data.batchId is string && data.batchId == batchId &&
+             data.teacherId is string && data.teacherId.size() >= 1 && data.teacherId.size() <= 128 &&
+             data.studentId is string && data.studentId == studentId &&
+             data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 80 &&
+             data.amountPaidInr is int && data.amountPaidInr >= 0 && data.amountPaidInr <= 100000 &&
+             data.paymentMethod in ['FREE', 'WALLET', 'UPI'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- USER PROFILE & PRIVATE SUBCOLLECTIONS ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'role', 'totalXp', 'quizzesCompleted', 'cardsReviewed', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'role', 'totalXp', 'quizzesCompleted', 'cardsReviewed', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'totalXp', 'quizzesCompleted', 'cardsReviewed', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /enrollments/{deckId} {
+        allow get: if isSignedIn() && isValidId(deckId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(deckId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['deckId', 'deckTitle', 'subject', 'teacherName', 'accentColorKey', 'masteredCount', 'totalCards', 'bestQuizPercent', 'quizzesTaken', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'deckTitle', 'subject', 'teacherName', 'accentColorKey', 'masteredCount', 'totalCards', 'bestQuizPercent', 'quizzesTaken', 'createdAt', 'updatedAt']) &&
+                         isValidEnrollment(incoming(), deckId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(deckId) &&
+                         request.auth.uid == userId &&
+                         isValidEnrollment(incoming(), deckId) &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['deckTitle', 'subject', 'teacherName', 'accentColorKey', 'masteredCount', 'totalCards', 'bestQuizPercent', 'quizzesTaken', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(deckId) && request.auth.uid == userId;
+      }
+
+      match /studyLogs/{logId} {
+        allow get: if isSignedIn() && isValidId(logId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(logId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['deckId', 'deckTitle', 'mode', 'scorePercent', 'correctCount', 'totalCount', 'xpEarned', 'createdAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'deckTitle', 'mode', 'scorePercent', 'correctCount', 'totalCount', 'xpEarned', 'createdAt']) &&
+                         isValidStudyLog(incoming());
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(logId) && request.auth.uid == userId;
+      }
+
+      match /wallet/{walletId} {
+        allow get: if isSignedIn() && isValidId(walletId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         walletId == 'summary' &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'balanceInr', 'totalAddedInr', 'totalSpentInr', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'balanceInr', 'totalAddedInr', 'totalSpentInr', 'createdAt', 'updatedAt']) &&
+                         isValidStudyWallet(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         walletId == 'summary' &&
+                         request.auth.uid == userId &&
+                         isValidStudyWallet(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['balanceInr', 'totalAddedInr', 'totalSpentInr', 'updatedAt']);
+
+        allow delete: if false;
+      }
+
+      match /transactions/{txId} {
+        allow get: if isSignedIn() && isValidId(txId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(txId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'type', 'amountInr', 'title', 'batchId', 'paymentMethod', 'status', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'type', 'amountInr', 'title', 'batchId', 'paymentMethod', 'status', 'createdAt']) &&
+                         isValidWalletTransaction(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      match /batchEnrollments/{batchId} {
+        allow get: if isSignedIn() && isValidId(batchId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(batchId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['batchId', 'batchTitle', 'subject', 'teacherId', 'teacherName', 'scheduleText', 'accentColorKey', 'coverImageData', 'amountPaidInr', 'paymentMethod', 'transactionId', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['batchId', 'batchTitle', 'subject', 'teacherId', 'teacherName', 'scheduleText', 'accentColorKey', 'coverImageData', 'amountPaidInr', 'paymentMethod', 'transactionId', 'createdAt', 'updatedAt']) &&
+                         isValidBatchEnrollment(incoming(), batchId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(batchId) &&
+                         request.auth.uid == userId &&
+                         isValidBatchEnrollment(incoming(), batchId) &&
+                         incoming().batchId == existing().batchId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['batchTitle', 'subject', 'scheduleText', 'coverImageData', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(batchId) && request.auth.uid == userId;
+      }
+    }
+
+    // --- STUDY DECKS & SUBCOLLECTIONS ---
+    match /decks/{deckId} {
+      allow get: if isSignedIn() && isValidId(deckId) &&
+                    (existing().teacherId == request.auth.uid || existing().published == true);
+
+      allow list: if isSignedIn() &&
+                     (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+      allow create: if isSignedIn() &&
+                       isValidId(deckId) &&
+                       incoming().teacherId == request.auth.uid &&
+                       incoming().keys().hasAll(['teacherId', 'teacherName', 'title', 'subject', 'description', 'joinCode', 'accentColorKey', 'published', 'flashcardCount', 'quizCount', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['teacherId', 'teacherName', 'title', 'subject', 'description', 'joinCode', 'accentColorKey', 'published', 'flashcardCount', 'quizCount', 'createdAt', 'updatedAt']) &&
+                       isValidStudyDeck(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(deckId) &&
+                       existing().teacherId == request.auth.uid &&
+                       isValidStudyDeck(incoming()) &&
+                       incoming().teacherId == existing().teacherId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'subject', 'description', 'accentColorKey', 'published', 'updatedAt']) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly(['flashcardCount', 'updatedAt']) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly(['quizCount', 'updatedAt'])
+                       );
+
+      allow delete: if isSignedIn() && isValidId(deckId) && existing().teacherId == request.auth.uid;
+
+      match /flashcards/{cardId} {
+        allow get: if isSignedIn() && isValidId(cardId) &&
+                      (existing().teacherId == request.auth.uid || existing().published == true);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+        allow create: if isSignedIn() &&
+                         isValidId(cardId) &&
+                         incoming().teacherId == request.auth.uid &&
+                         incoming().keys().hasAll(['deckId', 'teacherId', 'front', 'back', 'hint', 'orderIndex', 'published', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'teacherId', 'front', 'back', 'hint', 'orderIndex', 'published', 'createdAt', 'updatedAt']) &&
+                         isValidFlashcard(incoming(), deckId) &&
+                         exists(/databases/$(database)/documents/decks/$(deckId)) &&
+                         get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(cardId) &&
+                         existing().teacherId == request.auth.uid &&
+                         isValidFlashcard(incoming(), deckId) &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['front', 'back', 'hint', 'orderIndex', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(cardId) && existing().teacherId == request.auth.uid;
+      }
+
+      match /questions/{questionId} {
+        allow get: if isSignedIn() && isValidId(questionId) &&
+                      (existing().teacherId == request.auth.uid || existing().published == true);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+        allow create: if isSignedIn() &&
+                         isValidId(questionId) &&
+                         incoming().teacherId == request.auth.uid &&
+                         incoming().keys().hasAll(['deckId', 'teacherId', 'prompt', 'options', 'correctIndex', 'explanation', 'orderIndex', 'published', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'teacherId', 'prompt', 'options', 'correctIndex', 'explanation', 'orderIndex', 'published', 'createdAt', 'updatedAt']) &&
+                         isValidQuizQuestion(incoming(), deckId) &&
+                         exists(/databases/$(database)/documents/decks/$(deckId)) &&
+                         get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(questionId) &&
+                         existing().teacherId == request.auth.uid &&
+                         isValidQuizQuestion(incoming(), deckId) &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['prompt', 'options', 'correctIndex', 'explanation', 'orderIndex', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(questionId) && existing().teacherId == request.auth.uid;
+      }
+
+      match /progress/{studentId} {
+        allow get: if isSignedIn() && isValidId(studentId) &&
+                      (request.auth.uid == studentId || existing().teacherId == request.auth.uid);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
+
+        allow create: if isSignedIn() &&
+                         isValidId(studentId) &&
+                         request.auth.uid == studentId &&
+                         incoming().keys().hasAll(['deckId', 'teacherId', 'studentId', 'studentName', 'masteredCardIds', 'reviewedCardsCount', 'totalCardsCount', 'quizzesTaken', 'bestQuizPercent', 'lastQuizPercent', 'lastQuizCorrect', 'lastQuizTotal', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'teacherId', 'studentId', 'studentName', 'masteredCardIds', 'reviewedCardsCount', 'totalCardsCount', 'quizzesTaken', 'bestQuizPercent', 'lastQuizPercent', 'lastQuizCorrect', 'lastQuizTotal', 'createdAt', 'updatedAt']) &&
+                         isValidDeckProgress(incoming(), deckId, studentId) &&
+                         exists(/databases/$(database)/documents/decks/$(deckId)) &&
+                         get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == incoming().teacherId &&
+                         (
+                           get(/databases/$(database)/documents/decks/$(deckId)).data.published == true ||
+                           get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == request.auth.uid
+                         );
+
+        allow update: if isSignedIn() &&
+                         isValidId(studentId) &&
+                         request.auth.uid == studentId &&
+                         isValidDeckProgress(incoming(), deckId, studentId) &&
+                         incoming().studentId == existing().studentId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['studentName', 'masteredCardIds', 'reviewedCardsCount', 'totalCardsCount', 'quizzesTaken', 'bestQuizPercent', 'lastQuizPercent', 'lastQuizCorrect', 'lastQuizTotal', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(studentId) &&
+                         (request.auth.uid == studentId || existing().teacherId == request.auth.uid);
+      }
+
+      match /liveSessions/{sessionId} {
+        allow get: if isSignedIn() && isValidId(sessionId) &&
+                      (existing().teacherId == request.auth.uid || existing().published == true);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+        allow create: if isSignedIn() &&
+                         isValidId(sessionId) &&
+                         incoming().teacherId == request.auth.uid &&
+                         incoming().keys().hasAll(['deckId', 'teacherId', 'teacherName', 'active', 'published', 'activeItemType', 'activeItemIndex', 'activePrompt', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'teacherId', 'teacherName', 'active', 'published', 'activeItemType', 'activeItemIndex', 'activePrompt', 'createdAt', 'updatedAt']) &&
+                         isValidLiveSession(incoming(), deckId) &&
+                         exists(/databases/$(database)/documents/decks/$(deckId)) &&
+                         get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(sessionId) &&
+                         existing().teacherId == request.auth.uid &&
+                         isValidLiveSession(incoming(), deckId) &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['teacherName', 'active', 'published', 'activeItemType', 'activeItemIndex', 'activePrompt', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(sessionId) && existing().teacherId == request.auth.uid;
+      }
+
+      match /videos/{videoId} {
+        allow get: if isSignedIn() && isValidId(videoId) &&
+                      (existing().teacherId == request.auth.uid || existing().published == true);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+        allow create: if isSignedIn() &&
+                         isValidId(videoId) &&
+                         incoming().teacherId == request.auth.uid &&
+                         incoming().keys().hasAll(['deckId', 'teacherId', 'teacherName', 'title', 'notes', 'fileName', 'durationMs', 'fileSizeBytes', 'published', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['deckId', 'teacherId', 'teacherName', 'title', 'notes', 'fileName', 'durationMs', 'fileSizeBytes', 'published', 'createdAt', 'updatedAt']) &&
+                         isValidStudyVideo(incoming(), deckId) &&
+                         exists(/databases/$(database)/documents/decks/$(deckId)) &&
+                         get(/databases/$(database)/documents/decks/$(deckId)).data.teacherId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(videoId) &&
+                         existing().teacherId == request.auth.uid &&
+                         isValidStudyVideo(incoming(), deckId) &&
+                         incoming().deckId == existing().deckId &&
+                         incoming().teacherId == existing().teacherId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'notes', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(videoId) && existing().teacherId == request.auth.uid;
+      }
+    }
+
+    // --- STUDY BATCHES & MEMBERS ---
+    match /batches/{batchId} {
+      allow get: if isSignedIn() && isValidId(batchId) &&
+                    (existing().teacherId == request.auth.uid || existing().published == true);
+
+      allow list: if isSignedIn() &&
+                     (resource.data.teacherId == request.auth.uid || resource.data.published == true);
+
+      allow create: if isSignedIn() &&
+                       isValidId(batchId) &&
+                       incoming().teacherId == request.auth.uid &&
+                       incoming().keys().hasAll(['teacherId', 'teacherName', 'title', 'subject', 'description', 'scheduleText', 'batchCode', 'priceInr', 'upiId', 'coverImageData', 'accentColorKey', 'published', 'enrolledCount', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['teacherId', 'teacherName', 'title', 'subject', 'description', 'scheduleText', 'batchCode', 'priceInr', 'upiId', 'coverImageData', 'accentColorKey', 'published', 'enrolledCount', 'createdAt', 'updatedAt']) &&
+                       isValidStudyBatch(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(batchId) &&
+                       isValidStudyBatch(incoming()) &&
+                       incoming().teacherId == existing().teacherId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (
+                           existing().teacherId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'subject', 'description', 'scheduleText', 'priceInr', 'upiId', 'coverImageData', 'accentColorKey', 'published', 'updatedAt'])
+                         ) ||
+                         (
+                           (existing().published == true || existing().teacherId == request.auth.uid) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['enrolledCount', 'updatedAt']) &&
+                           incoming().enrolledCount == existing().enrolledCount + 1
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(batchId) && existing().teacherId == request.auth.uid;
+
+      match /members/{studentId} {
+        allow get: if isSignedIn() && isValidId(studentId) &&
+                      (request.auth.uid == studentId || existing().teacherId == request.auth.uid);
+
+        allow list: if isSignedIn() &&
+                       (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
+
+        allow create: if isSignedIn() &&
+                         isValidId(studentId) &&
+                         request.auth.uid == studentId &&
+                         incoming().keys().hasAll(['batchId', 'teacherId', 'studentId', 'studentName', 'amountPaidInr', 'paymentMethod', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['batchId', 'teacherId', 'studentId', 'studentName', 'amountPaidInr', 'paymentMethod', 'createdAt', 'updatedAt']) &&
+                         isValidBatchMember(incoming(), batchId, studentId) &&
+                         exists(/databases/$(database)/documents/batches/$(batchId)) &&
+                         get(/databases/$(database)/documents/batches/$(batchId)).data.teacherId == incoming().teacherId &&
+                         (
+                           get(/databases/$(database)/documents/batches/$(batchId)).data.published == true ||
+                           get(/databases/$(database)/documents/batches/$(batchId)).data.teacherId == request.auth.uid
+                         );
+
+        allow update: if false;
+
+        allow delete: if isSignedIn() && isValidId(studentId) &&
+                         (request.auth.uid == studentId || existing().teacherId == request.auth.uid);
+      }
+    }
+  }
+}
