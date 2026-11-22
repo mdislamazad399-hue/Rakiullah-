@@ -75,4 +75,11 @@
     <string name="guest_mode_label">Guest</string>
     <string name="sign_in_now">Sign In</string>
     <string name="guest_mode_banner">Running locally without sign-in. Sign in anytime for cloud sync.</string>
+    <string name="science_lab_title">Live Science Practical Room</string>
+    <string name="science_lab_subtitle">Run interactive Physics, Chemistry &amp; real sensor experiments with live AI lab analysis.</string>
+    <string name="science_lab_open">Open Practical Room</string>
+    <string name="science_lab_ai_title">AI Lab Partner</string>
+    <string name="science_lab_record">Record Reading</string>
+    <string name="science_lab_broadcast">Broadcast Live</string>
+    <string name="science_lab_camera_pip">Lab Cam</string>
 </resources>

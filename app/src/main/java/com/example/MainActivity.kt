@@ -81,6 +81,7 @@ import com.example.ui.screens.BatchesScreen
 import com.example.ui.screens.DeckDetailScreen
 import com.example.ui.screens.FlashcardSessionScreen
 import com.example.ui.screens.LiveClassScreen
+import com.example.ui.screens.LivePracticalRoomScreen
 import com.example.ui.screens.ProgressScreen
 import com.example.ui.screens.QuizSessionScreen
 import com.example.ui.screens.StudyScreen
@@ -91,6 +92,7 @@ import com.example.ui.viewmodel.AiCoachViewModel
 import com.example.ui.viewmodel.BatchDetailViewModel
 import com.example.ui.viewmodel.DeckDetailViewModel
 import com.example.ui.viewmodel.HomeViewModel
+import com.example.ui.viewmodel.SciencePracticalViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -257,6 +259,13 @@ private fun StudyDeckApp(
                 onStartFlashcards = { deckId -> navController.navigate("flashcards/$deckId") },
                 onStartQuiz = { deckId -> navController.navigate("quiz/$deckId") },
                 onStartLiveClass = { deckId -> navController.navigate("liveclass/$deckId") },
+                onOpenPracticalRoom = { deckId ->
+                    if (deckId.isNullOrBlank()) {
+                        navController.navigate("practical_room")
+                    } else {
+                        navController.navigate("practical_room?deckId=$deckId")
+                    }
+                },
                 onAddFlashcard = { navController.navigate("add_flashcard") },
                 onUploadVideo = { navController.navigate("upload_video") },
                 onAddBatch = { navController.navigate("add_batch") },
@@ -320,6 +329,7 @@ private fun StudyDeckApp(
                 onStartFlashcards = { navController.navigate("flashcards/$deckId") },
                 onStartQuiz = { navController.navigate("quiz/$deckId") },
                 onStartLiveClass = { navController.navigate("liveclass/$deckId") },
+                onOpenPracticalRoom = { navController.navigate("practical_room?deckId=$deckId") },
                 onAddFlashcard = { navController.navigate("add_flashcard?deckId=$deckId") },
                 onUploadVideo = { navController.navigate("upload_video?deckId=$deckId") },
             )
@@ -378,6 +388,33 @@ private fun StudyDeckApp(
             )
             LiveClassScreen(
                 viewModel = detailVm,
+                onOpenPracticalRoom = { navController.navigate("practical_room?deckId=$deckId") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = "practical_room?deckId={deckId}",
+            arguments = listOf(
+                navArgument("deckId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+        ) { backStackEntry ->
+            val linkedDeckId = backStackEntry.arguments?.getString("deckId")
+            val labVm: SciencePracticalViewModel = viewModel(
+                key = "${vmScopeKey}_lab_${linkedDeckId ?: "solo"}",
+                factory = viewModelFactory {
+                    initializer {
+                        val app = checkNotNull(this[APPLICATION_KEY])
+                        SciencePracticalViewModel(buildRepository(app), uid, linkedDeckId)
+                    }
+                },
+            )
+            LivePracticalRoomScreen(
+                viewModel = labVm,
+                currentUserId = uid,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -439,6 +476,7 @@ private fun MainTabsScaffold(
     onStartFlashcards: (String) -> Unit,
     onStartQuiz: (String) -> Unit,
     onStartLiveClass: (String) -> Unit,
+    onOpenPracticalRoom: (String?) -> Unit,
     onAddFlashcard: () -> Unit,
     onUploadVideo: () -> Unit,
     onAddBatch: () -> Unit,
@@ -599,6 +637,7 @@ private fun MainTabsScaffold(
                             onAddFlashcardClick = onAddFlashcard,
                             onUploadVideoClick = onUploadVideo,
                             onAddBatchClick = onAddBatch,
+                            onOpenPracticalRoom = { onOpenPracticalRoom(null) },
                             onOpenDeck = onOpenDeck,
                             onStartLiveClass = onStartLiveClass,
                             onDeleteDeck = { homeViewModel.deleteDeck(it) },
@@ -628,6 +667,7 @@ private fun MainTabsScaffold(
                                     onOpenDeck(deck.id)
                                 }
                             },
+                            onOpenPracticalRoom = { onOpenPracticalRoom(null) },
                             onOpenDeck = onOpenDeck,
                             onStartFlashcards = onStartFlashcards,
                             onStartQuiz = onStartQuiz,

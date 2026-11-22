@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Videocam
@@ -70,6 +71,7 @@ import com.example.ui.viewmodel.DeckDetailViewModel
 @Composable
 fun LiveClassScreen(
     viewModel: DeckDetailViewModel,
+    onOpenPracticalRoom: () -> Unit,
     onBack: () -> Unit,
 ) {
     val deckState by viewModel.deck.collectAsStateWithLifecycle()
@@ -215,32 +217,50 @@ fun LiveClassScreen(
                     }
                 }
 
-                val pillColor by animateColorAsState(
-                    targetValue = if (isLiveBroadcast) Color(0xFFD93829) else Color.White.copy(alpha = 0.2f),
-                    label = "livePillColor",
-                )
-                Surface(
-                    color = pillColor,
-                    shape = RoundedCornerShape(999.dp),
-                    modifier = Modifier.testTag("live_status_badge"),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    IconButton(
+                        onClick = onOpenPracticalRoom,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ),
+                        modifier = Modifier
+                            .size(44.dp)
+                            .testTag("live_class_science_lab_button"),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (isLiveBroadcast) Color.White else Color.LightGray)
-                        )
-                        Text(
-                            text = if (isLiveBroadcast) "LIVE" else "STANDBY",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Icon(Icons.Rounded.Science, contentDescription = "Open Science Practical Room")
+                    }
+
+                    val pillColor by animateColorAsState(
+                        targetValue = if (isLiveBroadcast) Color(0xFFD93829) else Color.White.copy(alpha = 0.2f),
+                        label = "livePillColor",
+                    )
+                    Surface(
+                        color = pillColor,
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier.testTag("live_status_badge"),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isLiveBroadcast) Color.White else Color.LightGray)
+                            )
+                            Text(
+                                text = if (isLiveBroadcast) "LIVE" else "STANDBY",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }

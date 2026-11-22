@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Videocam
@@ -75,6 +76,7 @@ fun TeachScreen(
     onAddFlashcardClick: () -> Unit,
     onUploadVideoClick: () -> Unit,
     onAddBatchClick: () -> Unit,
+    onOpenPracticalRoom: () -> Unit,
     onOpenDeck: (String) -> Unit,
     onStartLiveClass: (String) -> Unit,
     onDeleteDeck: (String) -> Unit,
@@ -213,6 +215,42 @@ fun TeachScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Add Batch")
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .clickable(onClick = onOpenPracticalRoom)
+                            .testTag("teach_science_lab_card"),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                        shape = MaterialTheme.shapes.large,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Science,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(28.dp),
+                            )
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Live Science Practical Room",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = "Ohm's Law, pH Titration, Pendulum, Real Hardware Sensors & AI Lab Partner",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f),
+                                )
+                            }
                         }
                     }
                 }

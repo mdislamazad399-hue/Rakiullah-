@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -61,6 +62,7 @@ fun StudyScreen(
     enrollmentsState: UiState<List<Enrollment>>,
     publishedDecksState: UiState<List<StudyDeck>>,
     onJoinByCode: (String) -> Unit,
+    onOpenPracticalRoom: () -> Unit,
     onOpenDeck: (String) -> Unit,
     onStartFlashcards: (String) -> Unit,
     onStartQuiz: (String) -> Unit,
@@ -141,6 +143,50 @@ fun StudyScreen(
                                 Text("Join")
                             }
                         }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable(onClick = onOpenPracticalRoom)
+                        .testTag("study_science_lab_card"),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Science,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(30.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Live Science Practical Room",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Text(
+                                text = "Run Physics & Chemistry simulations, live sensors & ask the AI Lab Partner",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f),
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                            contentDescription = "Open Science Practical Room",
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
                     }
                 }
             }

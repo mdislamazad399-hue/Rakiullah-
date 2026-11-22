@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Videocam
@@ -45,6 +46,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.SnackbarHost
@@ -98,6 +100,7 @@ fun DeckDetailScreen(
     onStartFlashcards: () -> Unit,
     onStartQuiz: () -> Unit,
     onStartLiveClass: () -> Unit,
+    onOpenPracticalRoom: () -> Unit,
     onAddFlashcard: () -> Unit,
     onUploadVideo: () -> Unit,
 ) {
@@ -237,6 +240,7 @@ fun DeckDetailScreen(
                                     onStartFlashcards = onStartFlashcards,
                                     onStartQuiz = onStartQuiz,
                                     onStartLiveClass = onStartLiveClass,
+                                    onOpenPracticalRoom = onOpenPracticalRoom,
                                 )
                             }
 
@@ -613,6 +617,7 @@ private fun DeckHeaderCard(
     onStartFlashcards: () -> Unit,
     onStartQuiz: () -> Unit,
     onStartLiveClass: () -> Unit,
+    onOpenPracticalRoom: () -> Unit,
 ) {
     val palette = deckAccentPalette(deck.accentColorKey, isSystemInDarkTheme())
     Card(
@@ -726,17 +731,47 @@ private fun DeckHeaderCard(
             }
 
             if (isTeacher) {
-                FilledTonalButton(
-                    onClick = onStartLiveClass,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    FilledTonalButton(
+                        onClick = onStartLiveClass,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("start_live_class_button"),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Icon(Icons.Rounded.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Live Video")
+                    }
+                    OutlinedButton(
+                        onClick = onOpenPracticalRoom,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("open_practical_room_button"),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Icon(Icons.Rounded.Science, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Science Lab")
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onOpenPracticalRoom,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
-                        .testTag("start_live_class_button"),
+                        .testTag("open_practical_room_button"),
                     shape = MaterialTheme.shapes.medium,
                 ) {
-                    Icon(Icons.Rounded.Videocam, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Science, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Live Video Class")
+                    Text("Live Science Practical Room")
                 }
             }
         }
